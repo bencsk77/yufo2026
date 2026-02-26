@@ -534,42 +534,6 @@ function createDeptCharts(data) {
     });
 }
 
-function loadViaJSONP() {
-    return new Promise((resolve, reject) => {
-        const callbackName = 'gvizCb_' + Date.now();
-        const script = document.createElement('script');
-        const timeout = setTimeout(() => {
-            cleanup();
-            reject(new Error('連線逾時'));
-        }, 15000);
-
-        function cleanup() {
-            clearTimeout(timeout);
-            delete window[callbackName];
-            if (script.parentNode) script.parentNode.removeChild(script);
-        }
-
-        window[callbackName] = function(response) {
-            cleanup();
-            if (response.status === 'error') {
-                reject(new Error(response.errors?.[0]?.message || '資料錯誤'));
-                return;
-            }
-            const table = response.table;
-            const colNames = (table.cols || []).map(col => col.label || '');
-            const dataRows = (table.rows || []).map(row =>
-                (row.c || []).map(cell => (cell && cell.v !== null && cell.v !== undefined) ? String(cell.v) : '')
-            );
-            resolve([colNames, ...dataRows]);
-        };
-
-        script.onerror = () => { cleanup(); reject(new Error('無法連接 Google Sheets')); };
-        const ts = Date.now();
-        script.src = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:json;responseHandler:${callbackName}&gid=${GID}&_t=${ts}`;
-        document.head.appendChild(script);
-    });
-}
-
 async function loadData() {
     const loadingEl = document.getElementById('loading');
     const errorEl = document.getElementById('error');
@@ -580,7 +544,12 @@ async function loadData() {
     contentEl.style.display = 'none';
 
     try {
-        const rows = await loadViaJSONP();
+        const ts = Date.now();
+        const url = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/pub?gid=${GID}&single=true&output=csv&_t=${ts}`;
+        const resp = await fetch(url);
+        if (!resp.ok) throw new Error('無法讀取 Google Sheets (HTTP ' + resp.status + ')');
+        const text = await resp.text();
+        const rows = parseCSV(text);
         if (rows.length < 10) throw new Error('數據格式不正確');
 
         const data = extractData(rows);
