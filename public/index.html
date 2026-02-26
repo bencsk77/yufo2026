@@ -1071,6 +1071,14 @@
 
         const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz5X-xzg0L6djUngbcn1qpI4Uw4kyrHtZlYZKVsxwtcGx4UoWKHtmqPnWy0dCxszLQhZw/exec';
 
+        function normalizePhone(raw) {
+            const p = raw.trim().replace(/[\s\-().]/g, '');
+            if (p.startsWith('+60')) return p;            // +60121111111 → unchanged
+            if (p.startsWith('60'))  return '+' + p;     // 60121111111  → +60121111111
+            if (p.startsWith('0'))   return '+60' + p.slice(1); // 0121111111 → +60121111111
+            return '+60' + p;                             // 121111111    → +60121111111
+        }
+
         // === 状态 ===
         let state = {
             count: parseInt(localStorage.getItem(CONFIG.storageKey)) || 0,
@@ -1446,7 +1454,7 @@
             const formData = {
                 id: Date.now().toString(36) + Math.random().toString(36).substr(2, 5),
                 name,
-                phone,
+                phone: normalizePhone(phone),
                 region,
                 role,
                 roleLabel: role === 'audience' ? '观礼当观众' : '入庄严图形',
