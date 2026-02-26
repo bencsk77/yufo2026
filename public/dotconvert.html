@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Formation Dot Converter</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, sans-serif; background: #0d1117; color: #e6edf3; padding: 24px; }
+    h1 { color: #c9a227; margin-bottom: 6px; }
+    p { color: #8b949e; margin-bottom: 20px; font-size: 0.9em; }
+    code { background: #1c2128; padding: 2px 6px; border-radius: 4px; font-family: monospace; }
+
+    .controls {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 10px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    .control-group { display: flex; flex-direction: column; gap: 6px; }
+    .control-group label { font-size: 0.82em; color: #8b949e; }
+    .control-group label span { color: #c9a227; font-weight: bold; }
+    input[type=range] { width: 100%; accent-color: #c9a227; }
+    .control-group small { font-size: 0.75em; color: #484f58; }
+
+    .actions { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+    button {
+      padding: 10px 22px; border: none; border-radius: 6px;
+      font-size: 0.95em; font-weight: 600; cursor: pointer; transition: opacity 0.15s;
+    }
+    button:disabled { opacity: 0.4; cursor: not-allowed; }
+    #detect-btn { background: #c9a227; color: #000; }
+    #detect-btn:hover:not(:disabled) { background: #e0b830; }
+    #download-btn { background: #238636; color: #fff; }
+    #download-btn:hover:not(:disabled) { background: #2ea043; }
+
+    #status {
+      background: #161b22; border: 1px solid #30363d; border-radius: 6px;
+      padding: 10px 14px; font-family: monospace; font-size: 0.85em;
+      color: #8b949e; margin-bottom: 16px; min-height: 38px;
+    }
+
+    .stats { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+    .stat {
+      background: #161b22; border: 1px solid #30363d; border-radius: 8px;
+      padding: 12px 20px; text-align: center; min-width: 110px;
+    }
+    .stat .num { font-size: 1.8em; font-weight: 700; color: #c9a227; }
+    .stat .lbl { font-size: 0.75em; color: #8b949e; margin-top: 2px; }
+    .stat.ok .num { color: #3fb950; }
+    .stat.warn .num { color: #d29922; }
+
+    .canvas-wrap {
+      border: 1px solid #30363d; border-radius: 8px;
+      overflow: hidden; background: #000;
+    }
+    #preview { display: block; max-width: 100%; height: auto; }
+  </style>
+</head>
+<body>
+
+  <h1>Formation Dot Converter</h1>
+  <p>
+    Loads <code>formation.svg</code>, detects each person dot via blob detection, and downloads
+    <code>formation-dots.svg</code> with one <code>&lt;circle&gt;</code> per person.
+    <strong>Must be served via HTTP</strong> — run <code>python3 -m http.server --directory public 8000</code>
+    and open <code>http://localhost:8000/dotconvert.html</code>.
+  </p>
+
+  <div class="controls">
+    <div class="control-group">
+      <label>Brightness threshold: <span id="thresh-val">130</span></label>
+      <input type="range" id="thresh" min="30" max="240" value="130">
+      <small>Pixels darker than this value count as dot pixels</small>
+    </div>
+    <div class="control-group">
+      <label>Min blob size: <span id="min-val">4</span> px²</label>
+      <input type="range" id="min-size" min="1" max="100" value="4">
+      <small>Smaller blobs are discarded as noise</small>
+    </div>
+    <div class="control-group">
+      <label>Max blob size: <span id="max-val">400</span> px²</label>
+      <input type="range" id="max-size" min="50" max="5000" value="400">
+      <small>Larger blobs are discarded as props/tables</small>
+    </div>
+    <div class="control-group">
+      <label>Processing scale: <span id="scale-val">40</span>%</label>
+      <input type="range" id="scale" min="10" max="100" value="40" step="5">
+      <small>Lower = faster processing, higher = more precision</small>
+    </div>
+  </div>
+
+  <div class="actions">
+    <button id="detect-btn" onclick="detect()">Detect Dots</button>
+    <button id="download-btn" onclick="downloadSVG()" disabled>Download formation-dots.svg</button>
+  </div>
+
+  <div id="status">Ready. Click "Detect Dots" to begin.</div>
+
+  <div class="stats" id="stats" style="display:none">
+    <div class="stat" id="stat-box-found">
+      <div class="num" id="stat-found">0</div>
+      <div class="lbl">Dots detected</div>
+    </div>
+    <div class="stat">
+      <div class="num">6000</div>
+      <div class="lbl">Target count</div>
+    </div>
+    <div class="stat">
+      <div class="num" id="stat-blobs">0</div>
+      <div class="lbl">Total blobs</div>
+    </div>
+    <div class="stat">
+      <div class="num" id="stat-time">0</div>
+      <div class="lbl">ms</div>
+    </div>
+  </div>
+
+  <div class="canvas-wrap">
+    <canvas id="preview"></canvas>
+  </div>
+
+  <canvas id="work" style="display:none"></canvas>
+
+<script>
+  let detectedDots = [];
+
+  const $ = id => document.getElementById(id);
+
+  // Live slider labels
+  $('thresh').oninput   = e => $('thresh-val').textContent  = e.target.value;
+  $('min-size').oninput = e => $('min-val').textContent     = e.target.value;
+  $('max-size').oninput = e => $('max-val').textContent     = e.target.value;
+  $('scale').oninput    = e => $('scale-val').textContent   = e.target.value;
+
+  function setStatus(msg) { $('status').textContent = msg; }
+
+  function loadImage(src) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload  = () => resolve(img);
+      img.onerror = () => reject(new Error('Failed to load ' + src));
+      img.src = src;
+    });
+  }
+
+  // Yield to browser to repaint between heavy steps
+  const tick = () => new Promise(r => setTimeout(r, 20));
+
+  async function detect() {
+    $('detect-btn').disabled = true;
+    $('download-btn').disabled = true;
+    $('stats').style.display = 'none';
+    detectedDots = [];
+
+    const t0 = performance.now();
+
+    // ── 1. Load image ────────────────────────────────────────────────
+    setStatus('Loading formation.svg…');
+    await tick();
+
+    let img;
+    try {
+      img = await loadImage('formation.svg');
+    } catch (e) {
+      setStatus('ERROR: Could not load formation.svg. Make sure you are running this from a local HTTP server in the public/ directory.');
+      $('detect-btn').disabled = false;
+      return;
+    }
+
+    const scalePct = parseInt($('scale').value) / 100;
+    const srcW = img.naturalWidth  || img.width;
+    const srcH = img.naturalHeight || img.height;
+    const W = Math.round(srcW * scalePct);
+    const H = Math.round(srcH * scalePct);
+
+    setStatus(`Drawing image at ${W}×${H} (${Math.round(W*H/1e6*10)/10}M pixels)…`);
+    await tick();
+
+    // ── 2. Draw to work canvas ────────────────────────────────────────
+    const work = $('work');
+    work.width  = W;
+    work.height = H;
+    const ctx = work.getContext('2d', { willReadFrequently: true });
+    ctx.fillStyle = 'white';
+    ctx.fillRect(0, 0, W, H);
+    ctx.drawImage(img, 0, 0, W, H);
+
+    let pixels;
+    try {
+      pixels = ctx.getImageData(0, 0, W, H).data;
+    } catch (e) {
+      setStatus('ERROR: Canvas was tainted (CORS). Serve this file via HTTP from the same directory as formation.svg.');
+      $('detect-btn').disabled = false;
+      return;
+    }
+
+    // ── 3. Threshold → binary map ─────────────────────────────────────
+    setStatus('Thresholding pixels…');
+    await tick();
+
+    const threshold = parseInt($('thresh').value);
+    const binary = new Uint8Array(W * H);
+    for (let i = 0; i < W * H; i++) {
+      const r = pixels[i * 4];
+      const g = pixels[i * 4 + 1];
+      const b = pixels[i * 4 + 2];
+      const a = pixels[i * 4 + 3];
+      binary[i] = (a > 50 && (r + g + b) / 3 < threshold) ? 1 : 0;
+    }
+
+    // ── 4. Connected components (BFS, 4-connected) ────────────────────
+    setStatus('Running blob detection… (may take a few seconds)');
+    await tick();
+
+    const labels   = new Int32Array(W * H).fill(-1);
+    const queue    = new Int32Array(W * H); // pre-allocated BFS queue
+    const components = [];
+    const dx = [-1, 1, 0, 0];
+    const dy = [0, 0, -1, 1];
+    let labelCount = 0;
+
+    for (let y = 0; y < H; y++) {
+      for (let x = 0; x < W; x++) {
+        const idx = y * W + x;
+        if (binary[idx] === 0 || labels[idx] !== -1) continue;
+
+        // BFS from this seed pixel
+        let head = 0, tail = 0;
+        labels[idx] = labelCount;
+        queue[tail++] = idx;
+
+        let sumX = 0, sumY = 0, size = 0;
+
+        while (head < tail) {
+          const cur = queue[head++];
+          const cx  = cur % W;
+          const cy  = (cur - cx) / W;
+          sumX += cx; sumY += cy; size++;
+
+          for (let d = 0; d < 4; d++) {
+            const nx = cx + dx[d];
+            const ny = cy + dy[d];
+            if (nx < 0 || nx >= W || ny < 0 || ny >= H) continue;
+            const ni = ny * W + nx;
+            if (binary[ni] === 1 && labels[ni] === -1) {
+              labels[ni] = labelCount;
+              queue[tail++] = ni;
+            }
+          }
+        }
+
+        components.push({ sumX, sumY, size });
+        labelCount++;
+      }
+    }
+
+    setStatus('Filtering blobs…');
+    await tick();
+
+    // ── 5. Filter by size, compute centroids ──────────────────────────
+    const minSize = parseInt($('min-size').value);
+    const maxSize = parseInt($('max-size').value);
+    const dots = [];
+
+    for (const c of components) {
+      if (c.size < minSize || c.size > maxSize) continue;
+      dots.push({
+        nx: c.sumX / c.size / W,   // normalised 0-1
+        ny: c.sumY / c.size / H
+      });
+    }
+
+    detectedDots = dots;
+    const t1 = performance.now();
+
+    // ── 6. Draw preview ───────────────────────────────────────────────
+    setStatus('Rendering preview…');
+    await tick();
+
+    const preview = $('preview');
+    const maxW    = Math.min(W, window.innerWidth - 50);
+    const dispW   = maxW;
+    const dispH   = Math.round(H * dispW / W);
+    preview.width  = dispW;
+    preview.height = dispH;
+
+    const pctx = preview.getContext('2d');
+    pctx.drawImage(work, 0, 0, dispW, dispH);
+
+    // Draw detected dots as red circles
+    pctx.fillStyle = 'rgba(255, 60, 60, 0.85)';
+    for (const d of dots) {
+      pctx.beginPath();
+      pctx.arc(d.nx * dispW, d.ny * dispH, 2.5, 0, Math.PI * 2);
+      pctx.fill();
+    }
+
+    // ── 7. Update UI ──────────────────────────────────────────────────
+    const count = dots.length;
+    const diff  = count - 6000;
+
+    $('stat-found').textContent = count;
+    $('stat-blobs').textContent = labelCount;
+    $('stat-time').textContent  = Math.round(t1 - t0);
+
+    const foundBox = $('stat-box-found');
+    foundBox.className = 'stat ' + (Math.abs(diff) < 200 ? 'ok' : 'warn');
+
+    $('stats').style.display = 'flex';
+
+    const hint = diff > 0
+      ? `${diff} too many — try increasing Min blob size or lowering Threshold.`
+      : diff < 0
+        ? `${Math.abs(diff)} too few — try decreasing Min blob size or raising Threshold.`
+        : 'Count matches target!';
+
+    setStatus(`Done in ${Math.round(t1 - t0)}ms — ${count} dots found. ${hint}`);
+    $('detect-btn').disabled = false;
+    if (count > 0) $('download-btn').disabled = false;
+  }
+
+  function downloadSVG() {
+    // Output matches the 1000×600 stage viewBox used in index.html
+    const VW = 1000, VH = 600;
+
+    const circles = detectedDots.map(d => {
+      const x = (d.nx * VW).toFixed(2);
+      const y = (d.ny * VH).toFixed(2);
+      return `  <circle class="dot" cx="${x}" cy="${y}" r="1.3"/>`;
+    }).join('\n');
+
+    const svg =
+      `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${VW} ${VH}">\n` +
+      circles + '\n</svg>';
+
+    const blob = new Blob([svg], { type: 'image/svg+xml' });
+    const a = document.createElement('a');
+    a.href     = URL.createObjectURL(blob);
+    a.download = 'formation-dots.svg';
+    a.click();
+  }
+</script>
+</body>
+</html>
