@@ -327,11 +327,11 @@
         #screen-flash {
             position: fixed;
             inset: 0;
-            background: rgba(254, 243, 199, 0.3);
+            background: rgba(254, 243, 199, 0.92);
             opacity: 0;
             pointer-events: none;
             z-index: 60;
-            transition: opacity 1.5s ease-out;
+            transition: opacity 0.5s ease-out;
         }
 
         #screen-flash.active {
@@ -1129,10 +1129,7 @@
 
         // === 恢复图像透明度 ===
         function restoreImageOpacity() {
-            const BASE_OPACITY = 0.12;
-            const FULL_OPACITY = 1.0;
-            const delta = (FULL_OPACITY - BASE_OPACITY) / CONFIG.totalDots;
-            ui.formationImage.style.opacity = BASE_OPACITY + delta * state.count;
+            ui.formationImage.style.opacity = state.count >= 1 ? 1.0 : 0.12;
         }
 
         // === 调整萤火虫画布大小 ===
@@ -1163,7 +1160,7 @@
         }
 
         function getAmbientCount() {
-            return 10 + Math.floor(state.count / 100);
+            return Math.min(70, 10 + state.count * 5);
         }
 
         function startFireflies() {
@@ -1344,36 +1341,31 @@
             // Scroll formation into view
             ui.fireflyCanvas.scrollIntoView({ behavior: 'smooth', block: 'center' });
 
-            // Spawn 15 burst fireflies
-            for (let i = 0; i < 15; i++) {
+            // Step 1: dramatic burst of 60 large fireflies for ~2 seconds
+            for (let i = 0; i < 60; i++) {
                 const ff = createFirefly(true);
                 ff.opacity = 0.8 + Math.random() * 0.2;
-                ff.vx = (Math.random() - 0.5) * 1.5;
-                ff.vy = (Math.random() - 0.5) * 1.5;
+                ff.size = 3 + Math.random() * 5;
+                ff.vx = (Math.random() - 0.5) * 2;
+                ff.vy = (Math.random() - 0.5) * 2;
                 fireflies.push(ff);
             }
 
-            // 500ms: screen flash + tick image opacity
+            // Step 2: bright flash at 2000ms, reveal image at full opacity
             setTimeout(() => {
                 ui.screenFlash.classList.add('active');
+                ui.formationImage.style.opacity = 1.0;
 
-                const BASE_OPACITY = 0.12;
-                const FULL_OPACITY = 1.0;
-                const newCount = state.count + 1;
-                const delta = (FULL_OPACITY - BASE_OPACITY) / CONFIG.totalDots;
-                const newOpacity = Math.min(FULL_OPACITY, BASE_OPACITY + delta * newCount);
-                ui.formationImage.style.opacity = newOpacity;
-
-                // 1700ms total: fade flash
+                // Step 3: flash fades quickly (CSS: 0.5s), image stays at 1.0
                 setTimeout(() => {
                     ui.screenFlash.classList.remove('active');
-                }, 1200);
+                }, 100);
 
-                // 3200ms total: callback
+                // Callback after flash fades
                 setTimeout(() => {
                     callback();
-                }, 2700);
-            }, 500);
+                }, 700);
+            }, 2000);
         }
 
         // === 关闭弹窗 ===
