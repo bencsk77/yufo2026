@@ -1160,7 +1160,15 @@
         }
 
         function getAmbientCount() {
-            return Math.min(70, 10 + state.count * 5);
+            return Math.min(70, 10 + state.count * 20);
+        }
+
+        function updateAmbientFireflies() {
+            const target = getAmbientCount();
+            const current = fireflies.filter(f => !f.isBurst).length;
+            for (let i = current; i < target; i++) {
+                fireflies.push(createFirefly(false));
+            }
         }
 
         function startFireflies() {
@@ -1190,7 +1198,7 @@
                 if (ff.y > canvas.height) ff.y = 0;
 
                 if (ff.isBurst) {
-                    ff.opacity -= 0.008;
+                    ff.opacity -= 0.003;
                     if (ff.opacity <= 0) {
                         fireflies.splice(i, 1);
                         continue;
@@ -1323,6 +1331,7 @@
                 state.count++;
                 localStorage.setItem(CONFIG.storageKey, state.count);
                 updateStats();
+                updateAmbientFireflies();
 
                 // 重置表单
                 ui.form.reset();
