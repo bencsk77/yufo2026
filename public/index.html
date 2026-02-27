@@ -311,7 +311,7 @@
             width: 100%;
             height: auto;
             display: block;
-            opacity: 0.12;
+            opacity: 0.05;
             transition: opacity 1.5s ease;
         }
 
@@ -1129,7 +1129,7 @@
 
         // === 恢复图像透明度 ===
         function restoreImageOpacity() {
-            ui.formationImage.style.opacity = 0.12;
+            ui.formationImage.style.opacity = 0.05;
         }
 
         // === 调整萤火虫画布大小 ===
@@ -1160,7 +1160,7 @@
         }
 
         function getAmbientCount() {
-            return Math.min(70, 10 + state.count * 20);
+            return state.count === 0 ? 5 : 25;
         }
 
         function updateAmbientFireflies() {
