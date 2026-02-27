@@ -1328,10 +1328,7 @@
             // 开始动画
             startLightingAnimation(() => {
                 // 更新计数
-                state.count++;
-                localStorage.setItem(CONFIG.storageKey, state.count);
                 updateStats();
-                updateAmbientFireflies();
 
                 // 重置表单
                 ui.form.reset();
@@ -1340,8 +1337,10 @@
                 ui.submitBtn.disabled = false;
                 ui.submitBtn.textContent = state.language === 'zh' ? '呈交祈愿' : 'Submit Prayer';
 
-                // 显示成功弹窗
-                ui.modal.classList.add('active');
+                // 2秒后显示成功弹窗
+                setTimeout(() => {
+                    ui.modal.classList.add('active');
+                }, 2000);
             });
         });
 
@@ -1351,6 +1350,11 @@
             ui.fireflyCanvas.scrollIntoView({ behavior: 'smooth', block: 'center' });
 
             // Step 1: dramatic burst of 60 large fireflies for ~2 seconds
+            // Increment count and update ambient fireflies at the same moment as the burst
+            state.count++;
+            localStorage.setItem(CONFIG.storageKey, state.count);
+            updateAmbientFireflies();
+
             for (let i = 0; i < 60; i++) {
                 const ff = createFirefly(true);
                 ff.opacity = 0.8 + Math.random() * 0.2;
