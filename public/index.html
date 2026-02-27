@@ -299,46 +299,28 @@
             color: #94a3b8;
         }
 
-        /* SVG 图腾 */
-        .svg-container {
+        /* === 图腾图像 + 萤火虫 === */
+        .formation-stage {
+            position: relative;
             width: 100%;
             max-width: 1200px;
             margin: 0 auto;
-            position: relative;
         }
 
-        #main-stage {
+        #formation-image {
             width: 100%;
             height: auto;
             display: block;
+            opacity: 0.12;
+            transition: opacity 1.5s ease;
         }
 
-        /* 点样式 */
-        .dot {
-            fill: #1e3a5f;
-            opacity: 0.4;
-            transition: fill 2s ease-out, opacity 2s ease-out, r 2s ease-out, filter 2s ease-out;
-        }
-
-        .dot.active {
-            fill: #c9a227;
-            opacity: 1;
-            r: 3;
-            filter: drop-shadow(0 0 4px #c9a227);
-        }
-
-        /* Flash Mode */
-        .flash-mode .dot {
-            fill: #fef3c7 !important;
-            opacity: 1 !important;
-            r: 2.5 !important;
-            filter: drop-shadow(0 0 6px rgba(254, 243, 199, 0.8)) !important;
-            transition: none !important;
-        }
-
-        .flash-mode .dot.active {
-            fill: #c9a227 !important;
-            r: 4 !important;
+        #firefly-canvas {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
         }
 
         /* 屏幕闪光 */
@@ -679,46 +661,6 @@
             text-decoration: none;
         }
 
-        /* === Canvas (Hidden) === */
-        #analysis-canvas {
-            display: none;
-        }
-
-        /* === Fallback UI === */
-        .fallback-ui {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            z-index: 30;
-            background: rgba(10, 22, 40, 0.95);
-            padding: 2rem;
-            border-radius: 16px;
-            border: 1px solid rgba(201, 162, 39, 0.3);
-            text-align: center;
-            max-width: 400px;
-            backdrop-filter: blur(10px);
-        }
-
-        .fallback-ui.hidden {
-            display: none;
-        }
-
-        .fallback-btn {
-            display: inline-block;
-            padding: 0.8rem 2rem;
-            background: linear-gradient(135deg, #b8860b 0%, #c9a227 100%);
-            color: #000;
-            font-weight: 600;
-            border-radius: 30px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .fallback-btn:hover {
-            transform: scale(1.05);
-            box-shadow: 0 0 20px rgba(201, 162, 39, 0.5);
-        }
 
         /* === 滚动提示 === */
         .scroll-indicator {
@@ -855,31 +797,14 @@
                 </div>
             </div>
 
-            <!-- SVG 图腾 -->
-            <div class="svg-container">
+            <!-- 图腾图像 + 萤火虫 -->
+            <div class="formation-stage">
                 <div id="loading-spinner">
                     <div class="spinner"></div>
                     <span data-zh="图腾生成中..." data-en="Generating formation...">图腾生成中...</span>
                 </div>
-
-                <!-- 手动加载回退 UI (默认隐藏，只有出错时才显示) -->
-                <div id="fallback-ui" class="fallback-ui hidden">
-                    <div style="font-size: 2.5rem; margin-bottom: 1rem;">⚠️</div>
-                    <h3 style="font-size: 1.2rem; color: #fff; margin-bottom: 0.5rem;" data-zh="本地预览模式" data-en="Local Preview Mode">本地预览模式</h3>
-                    <p style="color: #94a3b8; font-size: 0.9rem; margin-bottom: 1.5rem; line-height: 1.6;">
-                        <span data-zh="无法自动读取图片（浏览器安全限制）。" data-en="Cannot auto-load image (browser security).">无法自动读取图片（浏览器安全限制）。</span><br>
-                        <span data-zh="请点击下方按钮手动选择 shape.png" data-en="Please click below to select shape.png">请点击下方按钮手动选择 shape.png</span><br>
-                        <span style="color: #c9a227; font-size: 0.75rem;" data-zh="（上传至 GitHub 后将自动加载）" data-en="(Will auto-load after uploading to GitHub)">（上传至 GitHub 后将自动加载）</span>
-                    </p>
-                    <label class="fallback-btn">
-                        <span data-zh="选择 shape.png" data-en="Select shape.png">选择 shape.png</span>
-                        <input type="file" id="file-input" accept="image/*" style="display: none;">
-                    </label>
-                </div>
-
-                <svg id="main-stage" viewBox="0 0 1000 600" preserveAspectRatio="xMidYMid meet">
-                    <!-- 点将通过JS动态生成 -->
-                </svg>
+                <img id="formation-image" src="shape.png" alt="Formation" style="display:none;">
+                <canvas id="firefly-canvas"></canvas>
             </div>
         </section>
 
@@ -1057,9 +982,6 @@
         </div>
     </div>
 
-    <!-- Hidden Canvas -->
-    <canvas id="analysis-canvas"></canvas>
-
     <script>
         // === 配置 ===
         const CONFIG = {
@@ -1082,8 +1004,6 @@
         // === 状态 ===
         let state = {
             count: parseInt(localStorage.getItem(CONFIG.storageKey)) || 0,
-            dots: [],
-            availableIndices: [],
             language: 'zh'
         };
 
@@ -1092,7 +1012,6 @@
             buddhaOverlay: document.getElementById('buddha-overlay'),
             languageOverlay: document.getElementById('language-overlay'),
             mainContent: document.getElementById('main-content'),
-            stage: document.getElementById('main-stage'),
             countDisplay: document.getElementById('count-display'),
             remainingDisplay: document.getElementById('remaining-display'),
             form: document.getElementById('registration-form'),
@@ -1101,8 +1020,8 @@
             spinner: document.getElementById('loading-spinner'),
             screenFlash: document.getElementById('screen-flash'),
             video: document.getElementById('promo-video'),
-            fallback: document.getElementById('fallback-ui'),
-            fileInput: document.getElementById('file-input')
+            formationImage: document.getElementById('formation-image'),
+            fireflyCanvas: document.getElementById('firefly-canvas')
         };
 
         // === 开场动画序列 ===
@@ -1183,196 +1102,127 @@
         // === 初始化图腾 ===
         function initFormation() {
             updateStats();
+            restoreImageOpacity();
 
-            const img = new Image();
-            img.crossOrigin = "Anonymous";
+            const img = ui.formationImage;
 
-            img.onload = () => processImage(img);
-            img.onerror = () => {
-                // 自动加载失败，显示手动选择按钮
-                console.log('自动加载失败 (CORS/Path)，切换至手动模式');
+            const onLoaded = () => {
                 ui.spinner.style.display = 'none';
-                ui.fallback.classList.remove('hidden');
+                img.style.display = 'block';
+                resizeCanvas();
+                startFireflies();
+
+                const ro = new ResizeObserver(() => resizeCanvas());
+                ro.observe(img);
             };
 
-            img.src = CONFIG.imagePath;
-        }
-
-        // === 监听手动选择文件 ===
-        ui.fileInput.addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (file) {
-                ui.fallback.classList.add('hidden');
-                ui.spinner.style.display = 'block';
-
-                const reader = new FileReader();
-                reader.onload = (event) => {
-                    const img = new Image();
-                    img.onload = () => processImage(img);
-                    img.src = event.target.result;
+            if (img.complete && img.naturalWidth > 0) {
+                onLoaded();
+            } else {
+                img.onload = onLoaded;
+                img.onerror = () => {
+                    ui.spinner.style.display = 'none';
+                    img.style.display = 'block';
                 };
-                reader.readAsDataURL(file);
             }
-        });
+        }
 
-        // === 处理图片 ===
-        function processImage(img) {
-            setTimeout(() => {
-                const canvas = document.getElementById('analysis-canvas');
-                const ctx = canvas.getContext('2d');
+        // === 恢复图像透明度 ===
+        function restoreImageOpacity() {
+            const BASE_OPACITY = 0.12;
+            const FULL_OPACITY = 1.0;
+            const delta = (FULL_OPACITY - BASE_OPACITY) / CONFIG.totalDots;
+            ui.formationImage.style.opacity = BASE_OPACITY + delta * state.count;
+        }
 
-                const w = 1000;
-                const h = 600;
-                canvas.width = w;
-                canvas.height = h;
+        // === 调整萤火虫画布大小 ===
+        function resizeCanvas() {
+            const canvas = ui.fireflyCanvas;
+            const img = ui.formationImage;
+            canvas.width = img.offsetWidth;
+            canvas.height = img.offsetHeight;
+        }
 
-                // 绘制白色背景
-                ctx.fillStyle = "#FFFFFF";
-                ctx.fillRect(0, 0, w, h);
+        // === 萤火虫系统 ===
+        let fireflies = [];
+        let animationId = null;
 
-                // 计算缩放比例保持图片比例
-                const scale = Math.min(w / img.width, h / img.height) * 0.98;
-                const drawW = img.width * scale;
-                const drawH = img.height * scale;
-                const offsetX = (w - drawW) / 2;
-                const offsetY = (h - drawH) / 2;
+        function createFirefly(isBurst) {
+            const canvas = ui.fireflyCanvas;
+            return {
+                x: Math.random() * canvas.width,
+                y: Math.random() * canvas.height,
+                vx: (Math.random() - 0.5) * 0.6,
+                vy: (Math.random() - 0.5) * 0.6,
+                size: 1.5 + Math.random() * 2.5,
+                opacity: 0.2 + Math.random() * 0.8,
+                opacityDir: Math.random() > 0.5 ? 1 : -1,
+                opacitySpeed: 0.005 + Math.random() * 0.015,
+                isBurst: isBurst || false
+            };
+        }
 
-                // 绘制图片
-                ctx.drawImage(img, offsetX, offsetY, drawW, drawH);
+        function getAmbientCount() {
+            return 10 + Math.floor(state.count / 100);
+        }
 
-                const imageData = ctx.getImageData(0, 0, w, h);
-                const data = imageData.data;
-                const darkPixels = [];
+        function startFireflies() {
+            fireflies = [];
+            const ambientCount = getAmbientCount();
+            for (let i = 0; i < ambientCount; i++) {
+                fireflies.push(createFirefly(false));
+            }
+            if (animationId) cancelAnimationFrame(animationId);
+            animateFireflies();
+        }
 
-                // 采样深色像素 - Shape.png 是体育场俯视图
-                // 背景是浅灰色，图腾部分是深色/黑色点
-                for (let y = 0; y < h; y += 2) {
-                    for (let x = 0; x < w; x += 2) {
-                        const i = (y * w + x) * 4;
-                        const r = data[i];
-                        const g = data[i + 1];
-                        const b = data[i + 2];
-                        const alpha = data[i + 3];
+        function animateFireflies() {
+            const canvas = ui.fireflyCanvas;
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-                        // 识别深色区域（莲花图腾的点阵部分）
-                        // Shape.png 背景约 200+，图腾深色部分约 0-180
-                        if (alpha > 128 && r < 180 && g < 180 && b < 180) {
-                            darkPixels.push({ x, y });
-                        }
+            for (let i = fireflies.length - 1; i >= 0; i--) {
+                const ff = fireflies[i];
+
+                ff.x += ff.vx;
+                ff.y += ff.vy;
+
+                if (ff.x < 0) ff.x = canvas.width;
+                if (ff.x > canvas.width) ff.x = 0;
+                if (ff.y < 0) ff.y = canvas.height;
+                if (ff.y > canvas.height) ff.y = 0;
+
+                if (ff.isBurst) {
+                    ff.opacity -= 0.008;
+                    if (ff.opacity <= 0) {
+                        fireflies.splice(i, 1);
+                        continue;
                     }
-                }
-
-                console.log('识别到深色像素数量:', darkPixels.length);
-
-                if (darkPixels.length > 100) {
-                    generateDotsFromPixels(darkPixels);
                 } else {
-                    console.log('像素数量不足，使用备用方案');
-                    generateFallbackDots();
-                }
-            }, 300);
-        }
-
-        // === 从像素生成点 ===
-        function generateDotsFromPixels(pixelPool) {
-            const fragment = document.createDocumentFragment();
-            state.dots = [];
-            state.availableIndices = [];
-
-            for (let i = 0; i < CONFIG.totalDots; i++) {
-                let p;
-                if (pixelPool.length > 0) {
-                    const randIndex = Math.floor(Math.random() * pixelPool.length);
-                    p = pixelPool[randIndex];
-                    // 添加微小抖动
-                    p = {
-                        x: p.x + (Math.random() - 0.5) * 4,
-                        y: p.y + (Math.random() - 0.5) * 4
-                    };
-                } else {
-                    p = { x: 500, y: 300 };
+                    ff.opacity += ff.opacityDir * ff.opacitySpeed;
+                    if (ff.opacity >= 1.0) { ff.opacity = 1.0; ff.opacityDir = -1; }
+                    if (ff.opacity <= 0.2) { ff.opacity = 0.2; ff.opacityDir = 1; }
                 }
 
-                const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-                circle.setAttribute("cx", p.x.toFixed(1));
-                circle.setAttribute("cy", p.y.toFixed(1));
+                const grad = ctx.createRadialGradient(ff.x, ff.y, 0, ff.x, ff.y, ff.size * 3);
+                grad.addColorStop(0, `rgba(254, 243, 199, ${ff.opacity})`);
+                grad.addColorStop(0.4, `rgba(201, 162, 39, ${ff.opacity * 0.7})`);
+                grad.addColorStop(1, `rgba(201, 162, 39, 0)`);
 
-                // 随机大小
-                const r = 1.0 + Math.random() * 0.6;
-                circle.setAttribute("r", r);
-                circle.setAttribute("class", "dot");
-
-                fragment.appendChild(circle);
-
-                state.dots.push({
-                    el: circle,
-                    x: p.x,
-                    y: p.y
-                });
+                ctx.beginPath();
+                ctx.arc(ff.x, ff.y, ff.size * 3, 0, Math.PI * 2);
+                ctx.fillStyle = grad;
+                ctx.fill();
             }
 
-            // 随机化索引顺序
-            const indices = Array.from({ length: CONFIG.totalDots }, (_, k) => k);
-            shuffleArray(indices);
-            state.availableIndices = indices;
-
-            // 渲染
-            ui.stage.innerHTML = '';
-            ui.stage.appendChild(fragment);
-
-            // 隐藏加载，显示图腾
-            ui.spinner.style.display = 'none';
-            ui.stage.style.opacity = '1';
-
-            // 恢复已点亮的点
-            restoreProgress();
-        }
-
-        // === 备用方案：生成圆形点阵 ===
-        function generateFallbackDots() {
-            const fragment = document.createDocumentFragment();
-            state.dots = [];
-            state.availableIndices = [];
-
-            const centerX = 500;
-            const centerY = 300;
-            const maxRadius = 250;
-
-            for (let i = 0; i < CONFIG.totalDots; i++) {
-                // 随机角度和半径（更密集在中心）
-                const angle = Math.random() * Math.PI * 2;
-                const radius = Math.sqrt(Math.random()) * maxRadius;
-                const x = centerX + Math.cos(angle) * radius;
-                const y = centerY + Math.sin(angle) * radius;
-
-                const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-                circle.setAttribute("cx", x.toFixed(1));
-                circle.setAttribute("cy", y.toFixed(1));
-                circle.setAttribute("r", 1.0 + Math.random() * 0.6);
-                circle.setAttribute("class", "dot");
-
-                fragment.appendChild(circle);
-                state.dots.push({ el: circle, x, y });
+            // Top up ambient fireflies
+            const targetCount = getAmbientCount();
+            const ambientCount = fireflies.filter(f => !f.isBurst).length;
+            if (ambientCount < targetCount) {
+                fireflies.push(createFirefly(false));
             }
 
-            const indices = Array.from({ length: CONFIG.totalDots }, (_, k) => k);
-            shuffleArray(indices);
-            state.availableIndices = indices;
-
-            ui.stage.innerHTML = '';
-            ui.stage.appendChild(fragment);
-            ui.spinner.style.display = 'none';
-            ui.stage.style.opacity = '1';
-
-            restoreProgress();
-        }
-
-        // === 工具函数：随机打乱数组 ===
-        function shuffleArray(array) {
-            for (let i = array.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [array[i], array[j]] = [array[j], array[i]];
-            }
+            animationId = requestAnimationFrame(animateFireflies);
         }
 
         // === 更新统计数字 ===
@@ -1380,17 +1230,6 @@
             ui.countDisplay.textContent = state.count;
             const remaining = CONFIG.targetCount - state.count;
             ui.remainingDisplay.textContent = Math.max(0, remaining);
-        }
-
-        // === 恢复已点亮的进度 ===
-        function restoreProgress() {
-            for (let i = 0; i < state.count && i < state.availableIndices.length; i++) {
-                const dotIndex = state.availableIndices[i];
-                const dot = state.dots[dotIndex];
-                if (dot) {
-                    dot.el.classList.add('active');
-                }
-            }
         }
 
         // === 角色选择 ===
@@ -1502,41 +1341,38 @@
 
         // === 点灯动画 ===
         function startLightingAnimation(callback) {
-            const nextIndexPtr = state.count;
+            // Scroll formation into view
+            ui.fireflyCanvas.scrollIntoView({ behavior: 'smooth', block: 'center' });
 
-            if (nextIndexPtr >= state.availableIndices.length) {
-                alert(state.language === 'zh' ? '功德圆满！' : 'All positions filled!');
-                callback();
-                return;
+            // Spawn 15 burst fireflies
+            for (let i = 0; i < 15; i++) {
+                const ff = createFirefly(true);
+                ff.opacity = 0.8 + Math.random() * 0.2;
+                ff.vx = (Math.random() - 0.5) * 1.5;
+                ff.vy = (Math.random() - 0.5) * 1.5;
+                fireflies.push(ff);
             }
 
-            const targetDotIndex = state.availableIndices[nextIndexPtr];
-            const targetDot = state.dots[targetDotIndex];
-
-            // 先滚动到图腾位置
-            ui.stage.scrollIntoView({ behavior: 'smooth', block: 'center' });
-
+            // 500ms: screen flash + tick image opacity
             setTimeout(() => {
-                // 全图闪光
-                ui.stage.classList.add('flash-mode');
                 ui.screenFlash.classList.add('active');
 
-                // 点亮目标点
-                targetDot.el.classList.add('active');
+                const BASE_OPACITY = 0.12;
+                const FULL_OPACITY = 1.0;
+                const newCount = state.count + 1;
+                const delta = (FULL_OPACITY - BASE_OPACITY) / CONFIG.totalDots;
+                const newOpacity = Math.min(FULL_OPACITY, BASE_OPACITY + delta * newCount);
+                ui.formationImage.style.opacity = newOpacity;
 
-                // 维持闪光 1.2 秒
+                // 1700ms total: fade flash
                 setTimeout(() => {
-                    // 移除闪光，开始收缩
-                    ui.stage.classList.remove('flash-mode');
                     ui.screenFlash.classList.remove('active');
-
-                    // 等待收缩动画完成后回调
-                    setTimeout(() => {
-                        callback();
-                    }, 1500);
-
                 }, 1200);
 
+                // 3200ms total: callback
+                setTimeout(() => {
+                    callback();
+                }, 2700);
             }, 500);
         }
 
