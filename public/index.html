@@ -311,8 +311,7 @@
             width: 100%;
             height: auto;
             display: block;
-            opacity: 0.1;
-            transition: opacity 1s ease;
+            opacity: 0.25;
         }
 
         #formation-canvas {
@@ -970,7 +969,7 @@
             targetCount: 8000,
             storageKey: 'tzuchi_yufo_2026_v1',
             imagePath: 'pattern-bg.png',
-            demoCount: 0
+            demoCount: 100
         };
 
         const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz5X-xzg0L6djUngbcn1qpI4Uw4kyrHtZlYZKVsxwtcGx4UoWKHtmqPnWy0dCxszLQhZw/exec';
@@ -1097,7 +1096,6 @@
             const onLoaded = () => {
                 ui.spinner.style.display = 'none';
                 img.style.display = 'block';
-                img.style.opacity = '1';
                 canvas.style.display = 'block';
                 setupCanvasResizeObserver();
                 parseSvgCircles().then(() => {
@@ -1204,7 +1202,7 @@
             const cx = circleCoords[idx * 2] * scaleX;
             const cy = circleCoords[idx * 2 + 1] * scaleY;
             const r = CIRCLE_R_SVG * Math.min(scaleX, scaleY);
-            const DURATION = 800;
+            const DURATION = 3000;
             let startTime = null;
             function frame(ts) {
                 if (!startTime) startTime = ts;
@@ -1221,6 +1219,35 @@
                 ctx.fillStyle = grad; ctx.fill();
                 ctx.beginPath(); ctx.arc(cx, cy, pulseR, 0, Math.PI * 2);
                 ctx.fillStyle = 'rgba(254, 220, 50, 1.0)'; ctx.fill();
+                if (t < 1) { requestAnimationFrame(frame); }
+                else { if (onComplete) onComplete(); }
+            }
+            requestAnimationFrame(frame);
+        }
+
+        function animateBatchPulse(onComplete) {
+            const canvas = ui.formationCanvas, ctx = canvas.getContext('2d');
+            const r = CIRCLE_R_SVG * Math.min(scaleX, scaleY);
+            const DURATION = 1000;
+            let startTime = null;
+            function frame(ts) {
+                if (!startTime) startTime = ts;
+                const t = Math.min((ts - startTime) / DURATION, 1);
+                const pulseR = r + r * 2 * Math.sin(Math.PI * t);
+                const glowR = pulseR * 5;
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.shadowColor = 'rgba(254, 220, 50, 0.8)';
+                ctx.shadowBlur = glowR * 0.7;
+                ctx.fillStyle = 'rgba(254, 220, 50, 0.95)';
+                ctx.beginPath();
+                for (const idx of litIndices) {
+                    const cx = circleCoords[idx * 2] * scaleX;
+                    const cy = circleCoords[idx * 2 + 1] * scaleY;
+                    ctx.moveTo(cx + pulseR, cy);
+                    ctx.arc(cx, cy, pulseR, 0, Math.PI * 2);
+                }
+                ctx.fill();
+                ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0;
                 if (t < 1) { requestAnimationFrame(frame); }
                 else { if (onComplete) onComplete(); }
             }
@@ -1330,8 +1357,10 @@
             setTimeout(() => {
                 if (newIdx >= 0 && canvasReady && circleCount > 0) {
                     animateSingleCircle(newIdx, () => {
-                        drawBatchCircles();
-                        setTimeout(() => { ui.modal.classList.add('active'); }, 400);
+                        animateBatchPulse(() => {
+                            drawBatchCircles();
+                            setTimeout(() => { ui.modal.classList.add('active'); }, 400);
+                        });
                     });
                 } else {
                     drawBatchCircles();
