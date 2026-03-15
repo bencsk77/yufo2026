@@ -311,32 +311,6 @@
             width: 100%;
             height: auto;
             display: block;
-            opacity: 0.05;
-            transition: opacity 1.5s ease;
-        }
-
-        #firefly-canvas {
-            position: absolute;
-            inset: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-        }
-
-        /* 屏幕闪光 */
-        #screen-flash {
-            position: fixed;
-            inset: 0;
-            background: rgba(254, 243, 199, 0.92);
-            opacity: 0;
-            pointer-events: none;
-            z-index: 60;
-            transition: opacity 0.5s ease-out;
-        }
-
-        #screen-flash.active {
-            opacity: 1;
-            transition: none;
         }
 
         /* Loading */
@@ -731,9 +705,6 @@
         </div>
     </div>
 
-    <!-- 屏幕闪光层 -->
-    <div id="screen-flash"></div>
-
     <!-- 主内容 -->
     <div id="main-content">
         <!-- Hero Section -->
@@ -793,18 +764,17 @@
                 </div>
                 <div class="stat-box right">
                     <div class="stat-label" data-zh="目标剩余" data-en="Remaining">目标剩余</div>
-                    <div class="stat-number" id="remaining-display">6000</div>
+                    <div class="stat-number" id="remaining-display">8000</div>
                 </div>
             </div>
 
-            <!-- 图腾图像 + 萤火虫 -->
+            <!-- 图腾图像 -->
             <div class="formation-stage">
                 <div id="loading-spinner">
                     <div class="spinner"></div>
                     <span data-zh="图腾生成中..." data-en="Generating formation...">图腾生成中...</span>
                 </div>
-                <img id="formation-image" src="shape.png" alt="Formation" style="display:none;">
-                <canvas id="firefly-canvas"></canvas>
+                <img id="formation-image" src="pattern-bg.png" alt="Formation" style="display:none;">
             </div>
         </section>
 
@@ -985,10 +955,10 @@
     <script>
         // === 配置 ===
         const CONFIG = {
-            totalDots: 6000,
-            targetCount: 6000,
+            totalDots: 8000,
+            targetCount: 8000,
             storageKey: 'tzuchi_yufo_2026_v1',
-            imagePath: 'shape.png'
+            imagePath: 'pattern-bg.png'
         };
 
         const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz5X-xzg0L6djUngbcn1qpI4Uw4kyrHtZlYZKVsxwtcGx4UoWKHtmqPnWy0dCxszLQhZw/exec';
@@ -1018,10 +988,8 @@
             submitBtn: document.getElementById('submit-btn'),
             modal: document.getElementById('success-modal'),
             spinner: document.getElementById('loading-spinner'),
-            screenFlash: document.getElementById('screen-flash'),
             video: document.getElementById('promo-video'),
-            formationImage: document.getElementById('formation-image'),
-            fireflyCanvas: document.getElementById('firefly-canvas')
+            formationImage: document.getElementById('formation-image')
         };
 
         // === 开场动画序列 ===
@@ -1102,18 +1070,12 @@
         // === 初始化图腾 ===
         function initFormation() {
             updateStats();
-            restoreImageOpacity();
 
             const img = ui.formationImage;
 
             const onLoaded = () => {
                 ui.spinner.style.display = 'none';
                 img.style.display = 'block';
-                resizeCanvas();
-                startFireflies();
-
-                const ro = new ResizeObserver(() => resizeCanvas());
-                ro.observe(img);
             };
 
             if (img.complete && img.naturalWidth > 0) {
@@ -1125,109 +1087,6 @@
                     img.style.display = 'block';
                 };
             }
-        }
-
-        // === 恢复图像透明度 ===
-        function restoreImageOpacity() {
-            ui.formationImage.style.opacity = 0.05;
-        }
-
-        // === 调整萤火虫画布大小 ===
-        function resizeCanvas() {
-            const canvas = ui.fireflyCanvas;
-            const img = ui.formationImage;
-            canvas.width = img.offsetWidth;
-            canvas.height = img.offsetHeight;
-        }
-
-        // === 萤火虫系统 ===
-        let fireflies = [];
-        let animationId = null;
-
-        function createFirefly(isBurst) {
-            const canvas = ui.fireflyCanvas;
-            return {
-                x: Math.random() * canvas.width,
-                y: Math.random() * canvas.height,
-                vx: (Math.random() - 0.5) * 0.6,
-                vy: (Math.random() - 0.5) * 0.6,
-                size: 1.5 + Math.random() * 2.5,
-                opacity: 0.2 + Math.random() * 0.8,
-                opacityDir: Math.random() > 0.5 ? 1 : -1,
-                opacitySpeed: 0.005 + Math.random() * 0.015,
-                isBurst: isBurst || false
-            };
-        }
-
-        function getAmbientCount() {
-            return state.count === 0 ? 5 : 25;
-        }
-
-        function updateAmbientFireflies() {
-            const target = getAmbientCount();
-            const current = fireflies.filter(f => !f.isBurst).length;
-            for (let i = current; i < target; i++) {
-                fireflies.push(createFirefly(false));
-            }
-        }
-
-        function startFireflies() {
-            fireflies = [];
-            const ambientCount = getAmbientCount();
-            for (let i = 0; i < ambientCount; i++) {
-                fireflies.push(createFirefly(false));
-            }
-            if (animationId) cancelAnimationFrame(animationId);
-            animateFireflies();
-        }
-
-        function animateFireflies() {
-            const canvas = ui.fireflyCanvas;
-            const ctx = canvas.getContext('2d');
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            for (let i = fireflies.length - 1; i >= 0; i--) {
-                const ff = fireflies[i];
-
-                ff.x += ff.vx;
-                ff.y += ff.vy;
-
-                if (ff.x < 0) ff.x = canvas.width;
-                if (ff.x > canvas.width) ff.x = 0;
-                if (ff.y < 0) ff.y = canvas.height;
-                if (ff.y > canvas.height) ff.y = 0;
-
-                if (ff.isBurst) {
-                    ff.opacity -= 0.003;
-                    if (ff.opacity <= 0) {
-                        fireflies.splice(i, 1);
-                        continue;
-                    }
-                } else {
-                    ff.opacity += ff.opacityDir * ff.opacitySpeed;
-                    if (ff.opacity >= 1.0) { ff.opacity = 1.0; ff.opacityDir = -1; }
-                    if (ff.opacity <= 0.2) { ff.opacity = 0.2; ff.opacityDir = 1; }
-                }
-
-                const grad = ctx.createRadialGradient(ff.x, ff.y, 0, ff.x, ff.y, ff.size * 3);
-                grad.addColorStop(0, `rgba(254, 243, 199, ${ff.opacity})`);
-                grad.addColorStop(0.4, `rgba(201, 162, 39, ${ff.opacity * 0.7})`);
-                grad.addColorStop(1, `rgba(201, 162, 39, 0)`);
-
-                ctx.beginPath();
-                ctx.arc(ff.x, ff.y, ff.size * 3, 0, Math.PI * 2);
-                ctx.fillStyle = grad;
-                ctx.fill();
-            }
-
-            // Top up ambient fireflies
-            const targetCount = getAmbientCount();
-            const ambientCount = fireflies.filter(f => !f.isBurst).length;
-            if (ambientCount < targetCount) {
-                fireflies.push(createFirefly(false));
-            }
-
-            animationId = requestAnimationFrame(animateFireflies);
         }
 
         // === 更新统计数字 ===
@@ -1323,63 +1182,17 @@
             }
 
             // 保存到 localStorage
-            saveRegistration(formData);
-
-            // 开始动画
-            startLightingAnimation(() => {
-                // 更新计数
-                updateStats();
-
-                // 重置表单
-                ui.form.reset();
-                document.querySelectorAll('.role-btn').forEach(btn => btn.classList.remove('selected'));
-                document.getElementById('role').value = '';
-                ui.submitBtn.disabled = false;
-                ui.submitBtn.textContent = state.language === 'zh' ? '呈交祈愿' : 'Submit Prayer';
-
-                // 2秒后显示成功弹窗
-                setTimeout(() => {
-                    ui.modal.classList.add('active');
-                }, 2000);
-            });
-        });
-
-        // === 点灯动画 ===
-        function startLightingAnimation(callback) {
-            // Scroll formation into view
-            ui.fireflyCanvas.scrollIntoView({ behavior: 'smooth', block: 'center' });
-
-            // Step 1: dramatic burst of 60 large fireflies for ~2 seconds
-            // Increment count and update ambient fireflies at the same moment as the burst
             state.count++;
             localStorage.setItem(CONFIG.storageKey, state.count);
-            updateAmbientFireflies();
-
-            for (let i = 0; i < 60; i++) {
-                const ff = createFirefly(true);
-                ff.opacity = 0.8 + Math.random() * 0.2;
-                ff.size = 3 + Math.random() * 5;
-                ff.vx = (Math.random() - 0.5) * 2;
-                ff.vy = (Math.random() - 0.5) * 2;
-                fireflies.push(ff);
-            }
-
-            // Step 2: bright flash at 2000ms, reveal image at full opacity
-            setTimeout(() => {
-                ui.screenFlash.classList.add('active');
-                ui.formationImage.style.opacity = 1.0;
-
-                // Step 3: flash fades quickly (CSS: 0.5s), image stays at 1.0
-                setTimeout(() => {
-                    ui.screenFlash.classList.remove('active');
-                }, 100);
-
-                // Callback after flash fades
-                setTimeout(() => {
-                    callback();
-                }, 700);
-            }, 2000);
-        }
+            saveRegistration(formData);
+            updateStats();
+            ui.form.reset();
+            document.querySelectorAll('.role-btn').forEach(btn => btn.classList.remove('selected'));
+            document.getElementById('role').value = '';
+            ui.submitBtn.disabled = false;
+            ui.submitBtn.textContent = state.language === 'zh' ? '呈交祈愿' : 'Submit Prayer';
+            setTimeout(() => { ui.modal.classList.add('active'); }, 500);
+        });
 
         // === 关闭弹窗 ===
         function closeModal() {
