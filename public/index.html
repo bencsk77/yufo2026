@@ -311,6 +311,16 @@
             width: 100%;
             height: auto;
             display: block;
+            opacity: 0.1;
+            transition: opacity 1s ease;
+        }
+
+        #formation-canvas {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            pointer-events: none;
+            display: none;
         }
 
         /* Loading */
@@ -775,6 +785,7 @@
                     <span data-zh="图腾生成中..." data-en="Generating formation...">图腾生成中...</span>
                 </div>
                 <img id="formation-image" src="pattern-bg.png" alt="Formation" style="display:none;">
+                <canvas id="formation-canvas"></canvas>
             </div>
         </section>
 
@@ -958,7 +969,8 @@
             totalDots: 8000,
             targetCount: 8000,
             storageKey: 'tzuchi_yufo_2026_v1',
-            imagePath: 'pattern-bg.png'
+            imagePath: 'pattern-bg.png',
+            demoCount: 0
         };
 
         const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz5X-xzg0L6djUngbcn1qpI4Uw4kyrHtZlYZKVsxwtcGx4UoWKHtmqPnWy0dCxszLQhZw/exec';
@@ -973,7 +985,9 @@
 
         // === 状态 ===
         let state = {
-            count: parseInt(localStorage.getItem(CONFIG.storageKey)) || 0,
+            count: CONFIG.demoCount > 0
+                ? CONFIG.demoCount
+                : (parseInt(localStorage.getItem(CONFIG.storageKey)) || 0),
             language: 'zh'
         };
 
@@ -989,8 +1003,16 @@
             modal: document.getElementById('success-modal'),
             spinner: document.getElementById('loading-spinner'),
             video: document.getElementById('promo-video'),
-            formationImage: document.getElementById('formation-image')
+            formationImage: document.getElementById('formation-image'),
+            formationCanvas: document.getElementById('formation-canvas')
         };
+
+        // === 图腾 Canvas 动画状态 ===
+        const SVG_W = 1200, SVG_H = 696, CIRCLE_R_SVG = 2;
+        let circleCoords = null, circleCount = 0;
+        let availableIndices = null, poolPointer = 0;
+        let litIndices = new Set();
+        let scaleX = 1, scaleY = 1, canvasReady = false;
 
         // === 开场动画序列 ===
         function startIntroSequence() {
@@ -1070,22 +1092,24 @@
         // === 初始化图腾 ===
         function initFormation() {
             updateStats();
-
             const img = ui.formationImage;
-
+            const canvas = ui.formationCanvas;
             const onLoaded = () => {
                 ui.spinner.style.display = 'none';
                 img.style.display = 'block';
+                img.style.opacity = '1';
+                canvas.style.display = 'block';
+                setupCanvasResizeObserver();
+                parseSvgCircles().then(() => {
+                    buildIndexPool(circleCount);
+                    seedLitIndicesFromState();
+                    drawBatchCircles();
+                });
             };
-
-            if (img.complete && img.naturalWidth > 0) {
-                onLoaded();
-            } else {
+            if (img.complete && img.naturalWidth > 0) { onLoaded(); }
+            else {
                 img.onload = onLoaded;
-                img.onerror = () => {
-                    ui.spinner.style.display = 'none';
-                    img.style.display = 'block';
-                };
+                img.onerror = () => { ui.spinner.style.display = 'none'; img.style.display = 'block'; };
             }
         }
 
@@ -1094,6 +1118,113 @@
             ui.countDisplay.textContent = state.count;
             const remaining = CONFIG.targetCount - state.count;
             ui.remainingDisplay.textContent = Math.max(0, remaining);
+        }
+
+        // === 解析 SVG 圆圈坐标 ===
+        async function parseSvgCircles() {
+            try {
+                const text = await (await fetch('pattern.svg')).text();
+                const circleRx = /<circle\b[^>]+>/g;
+                const cxRx = /\bcx="([^"]+)"/;
+                const cyRx = /\bcy="([^"]+)"/;
+                const matches = text.match(circleRx) || [];
+                const coords = new Float32Array(matches.length * 2);
+                let n = 0;
+                for (const m of matches) {
+                    const cx = cxRx.exec(m), cy = cyRx.exec(m);
+                    if (!cx || !cy) continue;
+                    coords[n * 2] = parseFloat(cx[1]);
+                    coords[n * 2 + 1] = parseFloat(cy[1]);
+                    n++;
+                }
+                circleCoords = coords.subarray(0, n * 2);
+                circleCount = n;
+            } catch (e) { console.warn('pattern.svg parse failed:', e); }
+        }
+
+        function buildIndexPool(count) {
+            availableIndices = new Int32Array(count);
+            for (let i = 0; i < count; i++) availableIndices[i] = i;
+            for (let i = count - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                const tmp = availableIndices[i]; availableIndices[i] = availableIndices[j]; availableIndices[j] = tmp;
+            }
+        }
+
+        function seedLitIndicesFromState() {
+            const n = Math.min(state.count, circleCount);
+            for (let i = 0; i < n; i++) litIndices.add(availableIndices[i]);
+            poolPointer = n;
+        }
+
+        function pickNextIndex() {
+            if (!availableIndices || poolPointer >= circleCount) return -1;
+            return availableIndices[poolPointer++];
+        }
+
+        function resizeCanvas() {
+            const img = ui.formationImage, canvas = ui.formationCanvas;
+            const w = img.offsetWidth, h = img.offsetHeight;
+            if (!w || !h) return;
+            const dpr = window.devicePixelRatio || 1;
+            canvas.width = w * dpr; canvas.height = h * dpr;
+            canvas.style.width = w + 'px'; canvas.style.height = h + 'px';
+            scaleX = (w * dpr) / SVG_W; scaleY = (h * dpr) / SVG_H;
+            canvasReady = true;
+            drawBatchCircles();
+        }
+
+        function setupCanvasResizeObserver() {
+            new ResizeObserver(() => resizeCanvas()).observe(ui.formationImage);
+            resizeCanvas();
+        }
+
+        function drawBatchCircles() {
+            if (!canvasReady || circleCount === 0 || litIndices.size === 0) return;
+            const canvas = ui.formationCanvas;
+            const ctx = canvas.getContext('2d');
+            const r = CIRCLE_R_SVG * Math.min(scaleX, scaleY);
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.shadowColor = 'rgba(254, 220, 50, 0.8)';
+            ctx.shadowBlur = r * 3.5;
+            ctx.fillStyle = 'rgba(254, 220, 50, 0.95)';
+            ctx.beginPath();
+            for (const idx of litIndices) {
+                const cx = circleCoords[idx * 2] * scaleX;
+                const cy = circleCoords[idx * 2 + 1] * scaleY;
+                ctx.moveTo(cx + r, cy);
+                ctx.arc(cx, cy, r, 0, Math.PI * 2);
+            }
+            ctx.fill();
+            ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0;
+        }
+
+        function animateSingleCircle(idx, onComplete) {
+            const canvas = ui.formationCanvas, ctx = canvas.getContext('2d');
+            const cx = circleCoords[idx * 2] * scaleX;
+            const cy = circleCoords[idx * 2 + 1] * scaleY;
+            const r = CIRCLE_R_SVG * Math.min(scaleX, scaleY);
+            const DURATION = 800;
+            let startTime = null;
+            function frame(ts) {
+                if (!startTime) startTime = ts;
+                const t = Math.min((ts - startTime) / DURATION, 1);
+                const pulseR = r + r * 2 * Math.sin(Math.PI * t);
+                const glowR = pulseR * 5;
+                const margin = glowR + 2;
+                ctx.clearRect(cx - margin, cy - margin, margin * 2, margin * 2);
+                const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, glowR);
+                grad.addColorStop(0, 'rgba(254, 220, 50, 1.0)');
+                grad.addColorStop(0.3, 'rgba(254, 220, 50, 0.55)');
+                grad.addColorStop(1, 'rgba(254, 220, 50, 0)');
+                ctx.beginPath(); ctx.arc(cx, cy, glowR, 0, Math.PI * 2);
+                ctx.fillStyle = grad; ctx.fill();
+                ctx.beginPath(); ctx.arc(cx, cy, pulseR, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(254, 220, 50, 1.0)'; ctx.fill();
+                if (t < 1) { requestAnimationFrame(frame); }
+                else { if (onComplete) onComplete(); }
+            }
+            requestAnimationFrame(frame);
         }
 
         // === 角色选择 ===
@@ -1191,7 +1322,22 @@
             document.getElementById('role').value = '';
             ui.submitBtn.disabled = false;
             ui.submitBtn.textContent = state.language === 'zh' ? '呈交祈愿' : 'Submit Prayer';
-            setTimeout(() => { ui.modal.classList.add('active'); }, 500);
+
+            // 点灯动画
+            const newIdx = pickNextIndex();
+            if (newIdx >= 0) litIndices.add(newIdx);
+            ui.formationImage.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            setTimeout(() => {
+                if (newIdx >= 0 && canvasReady && circleCount > 0) {
+                    animateSingleCircle(newIdx, () => {
+                        drawBatchCircles();
+                        setTimeout(() => { ui.modal.classList.add('active'); }, 400);
+                    });
+                } else {
+                    drawBatchCircles();
+                    setTimeout(() => { ui.modal.classList.add('active'); }, 400);
+                }
+            }, 600);
         });
 
         // === 关闭弹窗 ===
