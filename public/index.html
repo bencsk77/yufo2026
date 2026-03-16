@@ -1300,8 +1300,12 @@
         }
 
         function pickNextIndex() {
-            if (!availableIndices || poolPointer >= circleCount) return -1;
-            return availableIndices[poolPointer++];
+            if (!availableIndices) return -1;
+            // Pool not yet exhausted — light a new dot
+            if (poolPointer < circleCount) return availableIndices[poolPointer++];
+            // All dots are lit — recycle a random one so the animation still plays
+            const litArray = Array.from(litIndices);
+            return litArray[Math.floor(Math.random() * litArray.length)];
         }
 
         function resizeCanvas() {
