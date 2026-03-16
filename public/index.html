@@ -1215,12 +1215,12 @@
             const cx = circleCoords[idx * 2] * scaleX;
             const cy = circleCoords[idx * 2 + 1] * scaleY;
             const r = CIRCLE_R_SVG * Math.min(scaleX, scaleY);
-            const DURATION = 3000;
+            const DURATION = 1000;
             let startTime = null;
             function frame(ts) {
                 if (!startTime) startTime = ts;
                 const t = Math.min((ts - startTime) / DURATION, 1);
-                const pulseR = r + r * 2 * Math.sin(Math.PI * t);
+                const pulseR = r + r * 2 * Math.abs(Math.sin(Math.PI * 2 * t));
                 const glowR = pulseR * 5;
                 const margin = glowR + 2;
                 ctx.clearRect(cx - margin, cy - margin, margin * 2, margin * 2);
@@ -1241,7 +1241,7 @@
         function animateBatchPulse(onComplete) {
             const canvas = ui.formationCanvas, ctx = canvas.getContext('2d');
             const r = CIRCLE_R_SVG * Math.min(scaleX, scaleY);
-            const DURATION = 1000;
+            const DURATION = 1500;
             let startTime = null;
             function frame(ts) {
                 if (!startTime) startTime = ts;
