@@ -55,33 +55,25 @@
         }
 
         #buddha-overlay img {
-            position: relative;
-            max-width: min(50vw, 420px);
-            max-height: 80vh;
-            width: auto;
-            height: auto;
-            object-fit: contain;
-            /* Fade edges into the dark background */
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            object-position: center;
+            /* Vignette: fade all edges into the dark background */
             mask-image: radial-gradient(
-                ellipse 60% 82% at 50% 44%,
-                black 35%,
-                rgba(0,0,0,0.6) 58%,
+                ellipse 85% 80% at 50% 50%,
+                black 45%,
+                rgba(0,0,0,0.65) 68%,
                 transparent 100%
             );
             -webkit-mask-image: radial-gradient(
-                ellipse 60% 82% at 50% 44%,
-                black 35%,
-                rgba(0,0,0,0.6) 58%,
+                ellipse 85% 80% at 50% 50%,
+                black 45%,
+                rgba(0,0,0,0.65) 68%,
                 transparent 100%
             );
-        }
-
-        /* Portrait phones: allow the image to be wider */
-        @media (max-aspect-ratio: 2/3) {
-            #buddha-overlay img {
-                max-width: 85vw;
-                max-height: 75vh;
-            }
         }
 
         /* === 语言选择 Overlay === */
@@ -780,7 +772,7 @@
 <body>
     <!-- 开场佛陀像 -->
     <div id="buddha-overlay">
-        <img src="buddha.png" alt="Buddha">
+        <img src="buddha.jpg" alt="Buddha">
     </div>
 
     <!-- 语言选择 -->
