@@ -974,7 +974,7 @@
                     </div>
 
                     <button type="submit" class="submit-btn" id="submit-btn"
-                            data-zh="呈交祈愿" data-en="Submit Prayer">呈交祈愿</button>
+                            data-zh="报名" data-en="Register">报名</button>
                 </form>
             </div>
         </section>
@@ -1483,7 +1483,7 @@
                 console.error('提交失败:', err);
                 alert(state.language === 'zh' ? '提交失败，请再试一次。' : 'Submission failed, please try again.');
                 ui.submitBtn.disabled = false;
-                ui.submitBtn.textContent = state.language === 'zh' ? '呈交祈愿' : 'Submit Prayer';
+                ui.submitBtn.textContent = state.language === 'zh' ? '报名' : 'Register';
                 return;
             }
 
@@ -1496,7 +1496,7 @@
             document.querySelectorAll('.role-btn').forEach(btn => btn.classList.remove('selected'));
             document.getElementById('role').value = '';
             ui.submitBtn.disabled = false;
-            ui.submitBtn.textContent = state.language === 'zh' ? '呈交祈愿' : 'Submit Prayer';
+            ui.submitBtn.textContent = state.language === 'zh' ? '报名' : 'Register';
 
             // 点灯动画
             const newIdx = pickNextIndex();
