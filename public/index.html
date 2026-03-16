@@ -968,9 +968,10 @@
             totalDots: 8000,
             targetCount: 8000,
             storageKey: 'tzuchi_yufo_2026_v1',
-            imagePath: 'pattern-bg.png',
-            demoCount: 100
+            imagePath: 'pattern-bg.png'
         };
+
+        const SPARKLE_SHEET_URL = 'https://docs.google.com/spreadsheets/d/1IHT2KZogqX6CSAW1qr8X3KxsYAhgnVXStoTnscl5oNM/gviz/tq?tqx=out:csv&sheet=sparkle&range=C2';
 
         const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz5X-xzg0L6djUngbcn1qpI4Uw4kyrHtZlYZKVsxwtcGx4UoWKHtmqPnWy0dCxszLQhZw/exec';
 
@@ -984,11 +985,21 @@
 
         // === 状态 ===
         let state = {
-            count: CONFIG.demoCount > 0
-                ? CONFIG.demoCount
-                : (parseInt(localStorage.getItem(CONFIG.storageKey)) || 0),
+            count: 0,
             language: 'zh'
         };
+
+        async function fetchParticipantCount() {
+            try {
+                const resp = await fetch(SPARKLE_SHEET_URL + '&_t=' + Date.now());
+                const text = await resp.text();
+                const val = parseInt(text.trim().replace(/"/g, ''));
+                if (!isNaN(val) && val >= 0) return val;
+            } catch (e) {
+                console.warn('Failed to fetch participant count:', e);
+            }
+            return 0;
+        }
 
         // === DOM 元素 ===
         const ui = {
@@ -1098,7 +1109,9 @@
                 img.style.display = 'block';
                 canvas.style.display = 'block';
                 setupCanvasResizeObserver();
-                parseSvgCircles().then(() => {
+                Promise.all([parseSvgCircles(), fetchParticipantCount()]).then(([, count]) => {
+                    state.count = count;
+                    updateStats();
                     buildIndexPool(circleCount);
                     seedLitIndicesFromState();
                     drawBatchCircles();
