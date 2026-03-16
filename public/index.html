@@ -1215,7 +1215,7 @@
             const cx = circleCoords[idx * 2] * scaleX;
             const cy = circleCoords[idx * 2 + 1] * scaleY;
             const r = CIRCLE_R_SVG * Math.min(scaleX, scaleY);
-            const DURATION = 1000;
+            const DURATION = 1500;
             let startTime = null;
             function frame(ts) {
                 if (!startTime) startTime = ts;
@@ -1372,8 +1372,11 @@
                     animateSingleCircle(newIdx, () => {
                         animateBatchPulse(() => {
                             drawBatchCircles();
+                            ui.formationCanvas.style.transition = 'opacity 1s ease';
+                            ui.formationCanvas.style.opacity = '0';
+                            ui.formationImage.style.transition = 'opacity 1s ease';
                             ui.formationImage.style.opacity = '1';
-                            setTimeout(() => { ui.modal.classList.add('active'); }, 400);
+                            setTimeout(() => { ui.modal.classList.add('active'); }, 3000);
                         });
                     });
                 } else {
