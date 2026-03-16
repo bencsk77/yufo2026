@@ -1094,6 +1094,66 @@
         let litIndices = new Set();
         let scaleX = 1, scaleY = 1, canvasReady = false;
 
+        // === SFX Engine (Web Audio API) ===
+        // All sounds synthesized — no audio files needed.
+        // AudioContext is created lazily on first user gesture (language button click)
+        // so the browser autoplay policy is never violated.
+        let audioCtx = null;
+
+        function getAudioCtx() {
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            return audioCtx;
+        }
+
+        // Shared helper: layer sine-wave partials with individual attack + shared decay
+        function playTone(partials, duration) {
+            const ctx = getAudioCtx();
+            const t = ctx.currentTime;
+            partials.forEach(({ freq, peak, attack }) => {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.type = 'sine';
+                osc.frequency.value = freq;
+                gain.gain.setValueAtTime(0, t);
+                gain.gain.linearRampToValueAtTime(peak, t + attack);
+                gain.gain.exponentialRampToValueAtTime(0.0001, t + duration);
+                osc.start(t);
+                osc.stop(t + duration);
+            });
+        }
+
+        // Singing bowl — warm mallet strike, very long resonance (~7s)
+        // Triggered on language selection (first user gesture)
+        function playSingingBowl() {
+            playTone([
+                { freq: 220,        peak: 0.18, attack: 0.15 },
+                { freq: 220 * 2.76, peak: 0.09, attack: 0.20 },
+                { freq: 220 * 5.40, peak: 0.04, attack: 0.25 },
+            ], 7);
+        }
+
+        // Crystal chime — bright, short, high-pitched (~1.5s)
+        // Triggered when a new dot lights up
+        function playChime() {
+            playTone([
+                { freq: 1320,       peak: 0.14, attack: 0.01 },
+                { freq: 1320 * 2.1, peak: 0.07, attack: 0.01 },
+            ], 1.5);
+        }
+
+        // Deep bell toll — low, powerful, long resonance (~9s)
+        // Triggered when the whole formation pulses
+        function playBellToll() {
+            playTone([
+                { freq: 110,        peak: 0.22, attack: 0.05 },
+                { freq: 110 * 2.76, peak: 0.12, attack: 0.05 },
+                { freq: 110 * 5.40, peak: 0.06, attack: 0.06 },
+                { freq: 110 * 8.93, peak: 0.03, attack: 0.07 },
+            ], 9);
+        }
+
         // === 开场动画序列 ===
         function startIntroSequence() {
             // 佛陀像显示 1.5 秒，让用户充分感受庄严
@@ -1110,6 +1170,7 @@
 
         // === 语言选择 ===
         function selectLanguage(lang) {
+            playSingingBowl();
             state.language = lang;
             localStorage.setItem('tzuchi_language', lang);
 
@@ -1439,7 +1500,9 @@
             ui.formationImage.scrollIntoView({ behavior: 'smooth', block: 'center' });
             setTimeout(() => {
                 if (newIdx >= 0 && canvasReady && circleCount > 0) {
+                    playChime();
                     animateSingleCircle(newIdx, () => {
+                        playBellToll();
                         animateBatchPulse(() => {
                             drawBatchCircles();
                             ui.formationCanvas.style.transition = 'opacity 1s ease';
