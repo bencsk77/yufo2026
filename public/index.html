@@ -1372,6 +1372,7 @@
                     animateSingleCircle(newIdx, () => {
                         animateBatchPulse(() => {
                             drawBatchCircles();
+                            ui.formationImage.style.opacity = '1';
                             setTimeout(() => { ui.modal.classList.add('active'); }, 400);
                         });
                     });
