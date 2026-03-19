@@ -603,6 +603,42 @@
             color: #94a3b8;
         }
 
+        /* === 隐私同意 === */
+        .privacy-group {
+            margin-top: 1.5rem;
+            padding: 1rem 1.2rem;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 8px;
+        }
+
+        .privacy-label {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.8rem;
+            cursor: pointer;
+        }
+
+        .privacy-label input[type="checkbox"] {
+            flex-shrink: 0;
+            width: 18px;
+            height: 18px;
+            margin-top: 0.15rem;
+            accent-color: #c9a227;
+            cursor: pointer;
+        }
+
+        .privacy-text {
+            font-size: 0.8rem;
+            color: #94a3b8;
+            line-height: 1.7;
+        }
+
+        .privacy-text a {
+            color: #c9a227;
+            text-decoration: underline;
+        }
+
         /* === 成功弹窗 === */
         #success-modal {
             position: fixed;
@@ -1097,6 +1133,15 @@
                                placeholder="请输入邀约人联络号码">
                     </div>
 
+                    <div class="privacy-group">
+                        <label class="privacy-label">
+                            <input type="checkbox" id="privacy-consent" required>
+                            <span class="privacy-text"
+                                  data-zh="通过签署本同意书或提交提供的信息，本人特此声明，已阅读、理解并同意接受慈济基金会于其官方网站（www.tzuchi.my）发布的隐私声明。"
+                                  data-en="By signing this consent form or submitting the provided information, I hereby declare that I have read, understood and consented to the Privacy Notice outlined by the Tzu Chi Foundation, accessible on its official website (www.tzuchi.my).">通过签署本同意书或提交提供的信息，本人特此声明，已阅读、理解并同意接受慈济基金会于其官方网站（<a href="https://www.tzuchi.my" target="_blank" rel="noopener noreferrer">www.tzuchi.my</a>）发布的隐私声明。</span>
+                        </label>
+                    </div>
+
                     <button type="submit" class="submit-btn" id="submit-btn"
                             data-zh="报名" data-en="Register">报名</button>
                 </form>
@@ -1320,7 +1365,16 @@
 
             // 更新所有带语言属性的元素
             document.querySelectorAll(`[${attr}]`).forEach(el => {
-                el.textContent = el.getAttribute(attr);
+                // Privacy text contains a hyperlink — rebuild it instead of overwriting with textContent
+                if (el.classList.contains('privacy-text')) {
+                    const url = 'https://www.tzuchi.my';
+                    const domain = 'www.tzuchi.my';
+                    const text = el.getAttribute(attr);
+                    const parts = text.split(domain);
+                    el.innerHTML = parts[0] + `<a href="${url}" target="_blank" rel="noopener noreferrer">${domain}</a>` + (parts[1] || '');
+                } else {
+                    el.textContent = el.getAttribute(attr);
+                }
             });
 
             // 更新 placeholder
