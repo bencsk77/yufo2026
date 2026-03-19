@@ -1063,6 +1063,22 @@
                                pattern="[0-9]*">
                     </div>
 
+                    <div class="form-group">
+                        <label data-zh="邀约人名字" data-en="Invited by">邀约人名字</label>
+                        <input type="text" class="form-input" id="invitor-name" name="invitor-name"
+                               data-placeholder-zh="请输入邀约人名字"
+                               data-placeholder-en="Enter invitor's name"
+                               placeholder="请输入邀约人名字">
+                    </div>
+
+                    <div class="form-group">
+                        <label data-zh="邀约人联络号码" data-en="Invitor's Contact Number">邀约人联络号码</label>
+                        <input type="tel" class="form-input" id="invitor-phone" name="invitor-phone"
+                               data-placeholder-zh="请输入邀约人联络号码"
+                               data-placeholder-en="Enter invitor's contact number"
+                               placeholder="请输入邀约人联络号码">
+                    </div>
+
                     <button type="submit" class="submit-btn" id="submit-btn"
                             data-zh="报名" data-en="Register">报名</button>
                 </form>
@@ -1536,6 +1552,8 @@
             const region = document.getElementById('region').value;
             const role = document.getElementById('role').value;
             const participants = parseInt(document.getElementById('participants').value, 10);
+            const invitorName = document.getElementById('invitor-name').value.trim();
+            const invitorPhone = document.getElementById('invitor-phone').value.trim();
 
             // 验证所有必填项
             if (!name || !phone || !region) return;
@@ -1559,6 +1577,8 @@
                 role,
                 roleLabel: role === 'audience' ? '观礼当观众' : role === 'formation' ? '入庄严图形' : '工作人员',
                 participants,
+                invitorName,
+                invitorPhone: invitorPhone ? normalizePhone(invitorPhone) : '',
                 language: state.language,
                 timestamp: new Date().toISOString()
             };
