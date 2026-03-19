@@ -160,7 +160,7 @@
         .main-title {
             font-size: clamp(2.5rem, 10vw, 5rem);
             color: #c9a227;
-            letter-spacing: 0.5em;
+            letter-spacing: 0.1em;
             margin-bottom: 1rem;
             text-shadow: 0 0 40px rgba(201, 162, 39, 0.5);
             animation: titleGlow 3s ease-in-out infinite alternate;
@@ -256,6 +256,65 @@
         .event-venue-en {
             font-size: clamp(0.9rem, 2.5vw, 1rem);
             color: #94a3b8;
+        }
+
+        .event-sessions {
+            margin: 0.6rem 0 1rem;
+        }
+
+        .event-session {
+            font-size: clamp(1rem, 3vw, 1.2rem);
+            color: #c9a227;
+            font-weight: 600;
+            line-height: 1.8;
+        }
+
+        .event-map-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin-top: 1.2rem;
+        }
+
+        .map-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.55rem 1.2rem;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-family: inherit;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+        }
+
+        .map-btn.waze {
+            background: #05c8f7;
+            color: #000;
+        }
+
+        .map-btn.waze:hover {
+            background: #04b0d8;
+            box-shadow: 0 0 15px rgba(5, 200, 247, 0.4);
+        }
+
+        .map-btn.gmaps {
+            background: #fff;
+            color: #333;
+        }
+
+        .map-btn.gmaps:hover {
+            background: #eee;
+            box-shadow: 0 0 15px rgba(255, 255, 255, 0.3);
+        }
+
+        .map-btn img {
+            width: 20px;
+            height: 20px;
+            object-fit: contain;
         }
 
         /* === 图形区域 === */
@@ -793,8 +852,6 @@
 
             <!-- 浴佛意义文案 -->
             <div class="ceremony-description">
-                <p class="ceremony-text" data-zh="以净水沐佛，洗涤内心烦恼；以善念共修，凝聚和平的愿力。" data-en="Bathe the Buddha with pure water to cleanse inner worries; cultivate together with good intentions to gather the power of peace.">以净水沐佛，洗涤内心烦恼；以善念共修，凝聚和平的愿力。</p>
-
                 <h4 class="ceremony-section-title" data-zh="浴佛节的意义" data-en="Significance of Buddha Bathing">浴佛节的意义</h4>
                 <p class="ceremony-text" data-zh="浴佛象征洁净身心，忆念佛陀慈悲与智慧。慈济以庄严仪式引导大众回归清净、发愿行善。" data-en="Buddha Bathing symbolizes purifying body and mind, remembering Buddha's compassion and wisdom. Tzu Chi guides everyone to return to purity and vow to do good through solemn ceremonies.">浴佛象征洁净身心，忆念佛陀慈悲与智慧。慈济以庄严仪式引导大众回归清净、发愿行善。</p>
 
@@ -817,9 +874,27 @@
 
             <!-- 活动地址信息 -->
             <div class="event-info">
-                <p class="event-date">10.5.2026（日）7am</p>
+                <p class="event-date" data-zh="10.5.2026（日）" data-en="10.5.2026 (Sun)">10.5.2026（日）</p>
+                <div class="event-sessions">
+                    <p class="event-session" data-zh="早上场次：7am - 9am" data-en="Morning Session: 7am - 9am">早上场次：7am - 9am</p>
+                    <p class="event-session" data-zh="晚上场次：6pm - 8pm" data-en="Evening Session: 6pm - 8pm">晚上场次：6pm - 8pm</p>
+                </div>
                 <p class="event-venue-zh">武吉加里尔国家曲棍球体育场</p>
                 <p class="event-venue-en">National Hockey Stadium, Bukit Jalil</p>
+                <div class="event-map-buttons">
+                    <a class="map-btn waze"
+                       href="https://waze.com/ul?q=National+Hockey+Stadium+Bukit+Jalil&navigate=yes"
+                       target="_blank" rel="noopener noreferrer">
+                        <img src="https://www.waze.com/favicon.ico" alt="Waze">
+                        Waze
+                    </a>
+                    <a class="map-btn gmaps"
+                       href="https://maps.google.com/?q=National+Hockey+Stadium,+Bukit+Jalil"
+                       target="_blank" rel="noopener noreferrer">
+                        <img src="https://maps.google.com/favicon.ico" alt="Google Maps">
+                        Google Maps
+                    </a>
+                </div>
             </div>
 
             <div class="scroll-indicator" data-zh="向下滑动" data-en="Scroll Down">
