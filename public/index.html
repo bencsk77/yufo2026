@@ -1052,6 +1052,17 @@
                         <input type="hidden" id="role" name="role" required>
                     </div>
 
+                    <div class="form-group">
+                        <label data-zh="人数" data-en="Number of Participants">人数</label>
+                        <input type="number" class="form-input" id="participants" name="participants" required
+                               min="1"
+                               data-placeholder-zh="请输入人数"
+                               data-placeholder-en="Enter number of participants"
+                               placeholder="请输入人数"
+                               inputmode="numeric"
+                               pattern="[0-9]*">
+                    </div>
+
                     <button type="submit" class="submit-btn" id="submit-btn"
                             data-zh="报名" data-en="Register">报名</button>
                 </form>
@@ -1524,6 +1535,7 @@
             const phone = document.getElementById('phone').value.trim();
             const region = document.getElementById('region').value;
             const role = document.getElementById('role').value;
+            const participants = parseInt(document.getElementById('participants').value, 10);
 
             // 验证所有必填项
             if (!name || !phone || !region) return;
@@ -1546,6 +1558,7 @@
                 region,
                 role,
                 roleLabel: role === 'audience' ? '观礼当观众' : role === 'formation' ? '入庄严图形' : '工作人员',
+                participants,
                 language: state.language,
                 timestamp: new Date().toISOString()
             };
