@@ -1656,13 +1656,11 @@
                 name,
                 phone: normalizePhone(phone),
                 region,
-                role,
+                sessionLabel: session === 'morning' ? '早上场次 7am-9am' : '晚上场次 6pm-8pm',
                 roleLabel: role === 'audience' ? '观礼当观众' : role === 'formation' ? '入庄严图形' : '工作人员',
                 participants,
                 invitorName,
                 invitorPhone: invitorPhone ? normalizePhone(invitorPhone) : '',
-                session,
-                sessionLabel: session === 'morning' ? '早上场次 7am-9am' : '晚上场次 6pm-8pm',
                 language: state.language,
                 timestamp: new Date().toISOString()
             };
