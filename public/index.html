@@ -1029,6 +1029,24 @@
                         </select>
                     </div>
 
+                    <!-- 场次选择 -->
+                    <div class="role-selection">
+                        <label data-zh="出席场次" data-en="Please indicate your attending session">出席场次</label>
+                        <div class="role-buttons">
+                            <button type="button" class="role-btn" id="session-morning" onclick="selectSession('morning')">
+                                <span class="role-icon">🌅</span>
+                                <span class="role-label" data-zh="早上场次" data-en="Morning Session">早上场次</span>
+                                <span class="role-desc">7am – 9am</span>
+                            </button>
+                            <button type="button" class="role-btn" id="session-evening" onclick="selectSession('evening')">
+                                <span class="role-icon">🌙</span>
+                                <span class="role-label" data-zh="晚上场次" data-en="Evening Session">晚上场次</span>
+                                <span class="role-desc">6pm – 8pm</span>
+                            </button>
+                        </div>
+                        <input type="hidden" id="session" name="session" required>
+                    </div>
+
                     <!-- 角色选择 -->
                     <div class="role-selection">
                         <label data-zh="你想成为" data-en="I want to be">你想成为</label>
@@ -1510,19 +1528,22 @@
 
         // === 角色选择 ===
         function selectRole(role) {
-            // 移除所有选中状态
-            document.querySelectorAll('.role-btn').forEach(btn => {
-                btn.classList.remove('selected');
+            ['audience', 'formation', 'volunteer'].forEach(r => {
+                document.getElementById(`role-${r}`).classList.remove('selected');
             });
-
-            // 设置选中状态
             const selectedBtn = document.getElementById(`role-${role}`);
-            if (selectedBtn) {
-                selectedBtn.classList.add('selected');
-            }
-
-            // 更新隐藏输入框
+            if (selectedBtn) selectedBtn.classList.add('selected');
             document.getElementById('role').value = role;
+        }
+
+        // === 场次选择 ===
+        function selectSession(session) {
+            ['morning', 'evening'].forEach(s => {
+                document.getElementById(`session-${s}`).classList.remove('selected');
+            });
+            const selectedBtn = document.getElementById(`session-${session}`);
+            if (selectedBtn) selectedBtn.classList.add('selected');
+            document.getElementById('session').value = session;
         }
 
         // === 获取所有报名数据（用于未来后端集成） ===
@@ -1554,6 +1575,7 @@
             const participants = parseInt(document.getElementById('participants').value, 10);
             const invitorName = document.getElementById('invitor-name').value.trim();
             const invitorPhone = document.getElementById('invitor-phone').value.trim();
+            const session = document.getElementById('session').value;
 
             // 验证所有必填项
             if (!name || !phone || !region) return;
@@ -1561,6 +1583,12 @@
             // 验证角色选择
             if (!role) {
                 alert(state.language === 'zh' ? '请选择「观礼当观众」或「入庄严图形」' : 'Please select "Be an Audience" or "Join Formation"');
+                return;
+            }
+
+            // 验证场次选择
+            if (!session) {
+                alert(state.language === 'zh' ? '请选择出席场次' : 'Please select your attending session');
                 return;
             }
 
@@ -1579,6 +1607,8 @@
                 participants,
                 invitorName,
                 invitorPhone: invitorPhone ? normalizePhone(invitorPhone) : '',
+                session,
+                sessionLabel: session === 'morning' ? '早上场次 7am-9am' : '晚上场次 6pm-8pm',
                 language: state.language,
                 timestamp: new Date().toISOString()
             };
@@ -1605,8 +1635,10 @@
             saveRegistration(formData);
             updateStats();
             ui.form.reset();
-            document.querySelectorAll('.role-btn').forEach(btn => btn.classList.remove('selected'));
+            ['audience', 'formation', 'volunteer'].forEach(r => document.getElementById(`role-${r}`).classList.remove('selected'));
+            ['morning', 'evening'].forEach(s => document.getElementById(`session-${s}`).classList.remove('selected'));
             document.getElementById('role').value = '';
+            document.getElementById('session').value = '';
             ui.submitBtn.disabled = false;
             ui.submitBtn.textContent = state.language === 'zh' ? '报名' : 'Register';
 
